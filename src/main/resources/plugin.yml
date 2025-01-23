@@ -21,7 +21,7 @@ commands:
     permission: ${plugin.id}.toggle
   discordignore:
     description: Toggle receiving of Discord messages from specific users
-    usage: "/<command> PLAYER..."
+    usage: "/<command> (PLAYER | DISCORD_UID)..."
     aliases: ["dignore", "discordunignore", "dunignore"]
     permission: ${plugin.id}.ignore
   discordignorelist:

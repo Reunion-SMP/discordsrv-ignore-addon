@@ -2,14 +2,18 @@ package com.github.jenbroek.discordsrv_ignore_addon;
 
 import github.scarsz.discordsrv.DiscordSRV;
 import java.util.HashSet;
+import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class CmdIgnore implements CommandExecutor {
+
+	private static final Pattern DISCORD_UID = Pattern.compile("[0-9]{18}");
 
 	private final DiscordsrvIgnoreAddon plugin;
 
@@ -32,22 +36,17 @@ public class CmdIgnore implements CommandExecutor {
 			}
 
 			for (var arg : args) {
-				String user = null;
-				var player = Bukkit.getPlayerExact(arg);
-				if (player != null) {
-					user = DiscordSRV.getPlugin().getAccountLinkManager().getDiscordId(player.getUniqueId());
-				}
-
+				var user = getDiscordUid(arg);
 				if (user == null) {
 					sender.sendMessage("No Discord user found for '%s'".formatted(arg));
 				} else {
 					var ignoring = plugin.getHasIgnored().getOrDefault(sender, new HashSet<>());
 
 					if (ignoring.add(user)) {
-						sender.sendMessage("Ignoring Discord messages from '%s'".formatted(player.getName()));
+						sender.sendMessage("Ignoring Discord messages from '%s'".formatted(user));
 					} else {
 						ignoring.remove(user);
-						sender.sendMessage("No longer ignoring Discord messages from '%s'".formatted(player.getName()));
+						sender.sendMessage("No longer ignoring Discord messages from '%s'".formatted(user));
 					}
 
 					plugin.getHasIgnored().put(sender, ignoring);
@@ -56,6 +55,19 @@ public class CmdIgnore implements CommandExecutor {
 		}
 
 		return true;
+	}
+
+	private static @Nullable String getDiscordUid(String playerNameOrDiscordId) {
+		String user = null;
+		if (DISCORD_UID.matcher(playerNameOrDiscordId).matches()) {
+			user = playerNameOrDiscordId;
+		} else {
+			var player = Bukkit.getPlayerExact(playerNameOrDiscordId);
+			if (player != null) {
+				user = DiscordSRV.getPlugin().getAccountLinkManager().getDiscordId(player.getUniqueId());
+			}
+		}
+		return user;
 	}
 
 }
