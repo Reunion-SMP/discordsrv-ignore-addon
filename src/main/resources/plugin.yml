@@ -10,9 +10,21 @@ permissions:
   ${plugin.id}.toggle:
     description: Grants access to /discordtoggle
     default: true
+  ${plugin.id}.ignore:
+    description: Grants access to /discordignore and /discordignorelist
+    default: true
 
 commands:
   discordtoggle:
     description: Toggle receiving of Discord messages entirely
     aliases: ["dtoggle"]
     permission: ${plugin.id}.toggle
+  discordignore:
+    description: Toggle receiving of Discord messages from specific users
+    usage: "/<command> PLAYER..."
+    aliases: ["dignore", "discordunignore", "dunignore"]
+    permission: ${plugin.id}.ignore
+  discordignorelist:
+    description: List users whose Discord messages you've ignored
+    aliases: ["dignorelist", "discordignored", "dignored"]
+    permission: ${plugin.id}.ignore
