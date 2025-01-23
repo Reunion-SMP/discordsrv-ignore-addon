@@ -5,3 +5,14 @@ api-version: ${versions.api}
 main: ${plugin.pkg}.${plugin.class}
 
 depend: [DiscordSRV]
+
+permissions:
+  ${plugin.id}.toggle:
+    description: Grants access to /discordtoggle
+    default: true
+
+commands:
+  discordtoggle:
+    description: Toggle receiving of Discord messages entirely
+    aliases: ["dtoggle"]
+    permission: ${plugin.id}.toggle
