@@ -48,11 +48,12 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 	@Subscribe
 	public void onDiscordMessagePreBroadcast(DiscordGuildMessagePreBroadcastEvent e) {
+		// TODO use `e.getAuthor()` once https://github.com/DiscordSRV/DiscordSRV/pull/1789 is available
+		var author = cachedAuthors.remove(e.getMessage());
+
 		e.getRecipients().removeIf(r -> {
 			if (unsubscribed.contains(r)) return true;
 
-			// TODO use `e.getAuthor()` once https://github.com/DiscordSRV/DiscordSRV/pull/1789 is available
-			var author = cachedAuthors.remove(e.getMessage());
 			if (author == null) return false;
 
 			var ignoring = hasIgnored.get(r);
