@@ -3,6 +3,9 @@ package com.github.jenbroek.discordsrv_ignore_addon;
 import github.scarsz.discordsrv.DiscordSRV;
 import java.util.HashSet;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -54,7 +57,13 @@ public class CmdIgnorelist implements TabExecutor {
 	}
 
 	private static String getMinecraftName(String discordUid) {
-		var uid = DiscordSRV.getPlugin().getAccountLinkManager().getUuid(discordUid);
+		UUID uid = null;
+
+		try {
+			uid = CompletableFuture.supplyAsync(() -> DiscordSRV.getPlugin().getAccountLinkManager().getUuid(discordUid)).get();
+		} catch (InterruptedException | ExecutionException ignored) {
+			// Ignored
+		}
 
 		if (uid != null) {
 			var n = Bukkit.getOfflinePlayer(uid).getName();

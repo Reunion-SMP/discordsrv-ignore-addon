@@ -2,6 +2,8 @@ package com.github.jenbroek.discordsrv_ignore_addon;
 
 import github.scarsz.discordsrv.DiscordSRV;
 import java.util.HashSet;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -63,8 +65,16 @@ public class CmdIgnore implements CommandExecutor {
 			user = playerNameOrDiscordId;
 		} else {
 			var player = Bukkit.getPlayerExact(playerNameOrDiscordId);
+
 			if (player != null) {
-				user = DiscordSRV.getPlugin().getAccountLinkManager().getDiscordId(player.getUniqueId());
+				var uuid = player.getUniqueId();
+				try {
+					user = CompletableFuture
+						.supplyAsync(() -> DiscordSRV.getPlugin().getAccountLinkManager().getDiscordId(uuid))
+						.get();
+				} catch (InterruptedException | ExecutionException ignored) {
+					// Ignored
+				}
 			}
 		}
 		return user;
