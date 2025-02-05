@@ -27,10 +27,10 @@ public class CmdToggle implements TabExecutor {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
 			if (plugin.getUnsubscribed().add(sender)) {
-				sender.sendMessage("All Discord messages are now hidden");
+				sender.sendMessage(Message.CHAT_HIDDEN.asComponent(plugin.getConfig()));
 			} else {
 				plugin.getUnsubscribed().remove(sender);
-				sender.sendMessage("Non-ignored Discord messages are now shown");
+				sender.sendMessage(Message.CHAT_SHOWN.asComponent(plugin.getConfig()));
 			}
 		}
 		return true;

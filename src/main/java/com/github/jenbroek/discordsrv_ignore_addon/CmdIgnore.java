@@ -38,15 +38,15 @@ public class CmdIgnore implements CommandExecutor {
 			for (var arg : args) {
 				var user = getDiscordUid(arg);
 				if (user == null) {
-					sender.sendMessage("No Discord user found for '%s'".formatted(arg));
+					sender.sendMessage(Message.UNKNOWN_USER.asComponent(plugin.getConfig(), arg));
 				} else {
 					var ignoring = plugin.getHasIgnored().getOrDefault(sender, new HashSet<>());
 
 					if (ignoring.add(user)) {
-						sender.sendMessage("Ignoring Discord messages from '%s'".formatted(user));
+						sender.sendMessage(Message.USER_IGNORED.asComponent(plugin.getConfig(), arg));
 					} else {
 						ignoring.remove(user);
-						sender.sendMessage("No longer ignoring Discord messages from '%s'".formatted(user));
+						sender.sendMessage(Message.USER_UNIGNORED.asComponent(plugin.getConfig(), arg));
 					}
 
 					plugin.getHasIgnored().put(sender, ignoring);

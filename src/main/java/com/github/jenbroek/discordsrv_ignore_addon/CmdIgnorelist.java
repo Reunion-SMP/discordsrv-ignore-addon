@@ -31,9 +31,9 @@ public class CmdIgnorelist implements TabExecutor {
 			var s = String.join(", ", ignoring);
 
 			if (s.isEmpty()) {
-				sender.sendMessage("No Discord users ignored");
+				sender.sendMessage(Message.LIST_IGNORED_EMPTY.asComponent(plugin.getConfig()));
 			} else {
-				sender.sendMessage("Ignoring Discord messages from: " + s);
+				sender.sendMessage(Message.LIST_IGNORED_TEMPLATE.asComponent(plugin.getConfig(), s));
 			}
 		}
 

@@ -11,6 +11,7 @@ repositories {
 dependencies {
 	compileOnly(libs.paper.api)
 	compileOnly(libs.discordsrv.api)
+	compileOnly(libs.adventure.api)
 }
 
 val pat = "-"

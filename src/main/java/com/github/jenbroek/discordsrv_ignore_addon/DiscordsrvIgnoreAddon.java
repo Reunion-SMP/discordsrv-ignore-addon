@@ -31,6 +31,8 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		Objects.requireNonNull(getCommand("discordtoggle")).setExecutor(new CmdToggle(this));
 		Objects.requireNonNull(getCommand("discordignore")).setExecutor(new CmdIgnore(this));
 		Objects.requireNonNull(getCommand("discordignorelist")).setExecutor(new CmdIgnorelist(this));
+
+		saveDefaultConfig();
 	}
 
 	@Override
