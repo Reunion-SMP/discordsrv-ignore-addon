@@ -1,7 +1,9 @@
 package com.github.jenbroek.discordsrv_ignore_addon;
 
+import github.scarsz.discordsrv.DiscordSRV;
 import java.util.HashSet;
 import java.util.List;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -28,7 +30,7 @@ public class CmdIgnorelist implements TabExecutor {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
 			var ignoring = plugin.getHasIgnored().getOrDefault(sender, new HashSet<>());
-			var s = String.join(", ", ignoring);
+			var s = String.join(", ", ignoring.stream().map(CmdIgnorelist::getMinecraftName).toList());
 
 			if (s.isEmpty()) {
 				sender.sendMessage(Message.LIST_IGNORED_EMPTY.asComponent(plugin.getConfig()));
@@ -49,6 +51,19 @@ public class CmdIgnorelist implements TabExecutor {
 	) {
 		// Inhibit default completions
 		return List.of();
+	}
+
+	private static String getMinecraftName(String discordUid) {
+		var uid = DiscordSRV.getPlugin().getAccountLinkManager().getUuid(discordUid);
+
+		if (uid != null) {
+			var n = Bukkit.getOfflinePlayer(uid).getName();
+			if (n != null) {
+				return n;
+			}
+		}
+
+		return discordUid;
 	}
 
 }
