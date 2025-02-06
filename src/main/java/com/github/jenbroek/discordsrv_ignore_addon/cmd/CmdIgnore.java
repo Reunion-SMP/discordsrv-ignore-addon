@@ -1,5 +1,7 @@
-package com.github.jenbroek.discordsrv_ignore_addon;
+package com.github.jenbroek.discordsrv_ignore_addon.cmd;
 
+import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
+import com.github.jenbroek.discordsrv_ignore_addon.data.Message;
 import github.scarsz.discordsrv.DiscordSRV;
 import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
@@ -30,7 +32,7 @@ public class CmdIgnore implements CommandExecutor {
 		@NotNull String label,
 		@NotNull String[] args
 	) {
-		if (!(sender instanceof Player)) {
+		if (!(sender instanceof Player player)) {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
 			if (args.length == 0) {
@@ -40,18 +42,18 @@ public class CmdIgnore implements CommandExecutor {
 			for (var arg : args) {
 				var user = getDiscordUid(arg);
 				if (user == null) {
-					sender.sendMessage(Message.UNKNOWN_USER.asComponent(plugin.getConfig(), arg));
+					player.sendMessage(Message.UNKNOWN_USER.asComponent(plugin.getConfig(), arg));
 				} else {
-					var ignoring = plugin.getHasIgnored().getOrDefault(sender, new HashSet<>());
+					var ignoring = plugin.getHasIgnored().getOrDefault(player.getUniqueId(), new HashSet<>());
 
 					if (ignoring.add(user)) {
-						sender.sendMessage(Message.USER_IGNORED.asComponent(plugin.getConfig(), arg));
+						player.sendMessage(Message.USER_IGNORED.asComponent(plugin.getConfig(), arg));
 					} else {
 						ignoring.remove(user);
-						sender.sendMessage(Message.USER_UNIGNORED.asComponent(plugin.getConfig(), arg));
+						player.sendMessage(Message.USER_UNIGNORED.asComponent(plugin.getConfig(), arg));
 					}
 
-					plugin.getHasIgnored().put(sender, ignoring);
+					plugin.getHasIgnored().put(player.getUniqueId(), ignoring);
 				}
 			}
 		}

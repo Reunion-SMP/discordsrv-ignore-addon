@@ -1,5 +1,6 @@
 plugins {
 	java
+	alias(libs.plugins.shadow)
 }
 
 repositories {
@@ -12,6 +13,7 @@ dependencies {
 	compileOnly(libs.paper.api)
 	compileOnly(libs.discordsrv.api)
 	compileOnly(libs.adventure.api)
+	implementation(libs.jedis)
 }
 
 val pat = "-"
@@ -56,6 +58,16 @@ tasks {
 	}
 
 	jar {
+		finalizedBy(shadowJar)
+	}
+
+	shadowJar {
+		minimize()
+		relocate("redis.clients.jedis", "${pluginGroup}.deps.jedis")
+
+		exclude("META-INF/maven/**")
+		exclude("META-INF/proguard/**")
+
 		from("LICENSE") {
 			rename {
 				"LICENSE-${pluginId}"

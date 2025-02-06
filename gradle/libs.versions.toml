@@ -3,8 +3,13 @@ java = "21"
 paper-api = "1.21.3-R0.1-SNAPSHOT"
 discordsrv-api = "1.29.0"
 adventure-api = "4.17.0"
+jedis = "5.2.0"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api" }
 discordsrv-api = { module = "com.discordsrv:discordsrv", version.ref = "discordsrv-api" }
 adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventure-api" }
+jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version = "9.0.0-beta7" }

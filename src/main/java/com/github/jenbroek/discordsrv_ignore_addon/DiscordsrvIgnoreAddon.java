@@ -1,25 +1,45 @@
 package com.github.jenbroek.discordsrv_ignore_addon;
 
+import com.github.jenbroek.discordsrv_ignore_addon.cmd.CmdIgnore;
+import com.github.jenbroek.discordsrv_ignore_addon.cmd.CmdIgnorelist;
+import com.github.jenbroek.discordsrv_ignore_addon.cmd.CmdToggle;
+import com.github.jenbroek.discordsrv_ignore_addon.data.JedisSimpleMap;
+import com.github.jenbroek.discordsrv_ignore_addon.data.JedisSimpleSet;
+import com.github.jenbroek.discordsrv_ignore_addon.data.SimpleMap;
+import com.github.jenbroek.discordsrv_ignore_addon.data.SimpleSet;
 import github.scarsz.discordsrv.DiscordSRV;
 import github.scarsz.discordsrv.api.Subscribe;
 import github.scarsz.discordsrv.api.events.DiscordGuildMessagePostProcessEvent;
 import github.scarsz.discordsrv.api.events.DiscordGuildMessagePreBroadcastEvent;
 import github.scarsz.discordsrv.dependencies.kyori.adventure.text.Component;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.bukkit.command.CommandSender;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import org.apache.logging.log4j.util.Strings;
+import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.JedisPooled;
+import redis.clients.jedis.UnifiedJedis;
 
 public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener {
 
-	// TODO persist
-	private final Set<CommandSender> unsubscribed = new HashSet<>();
-	private final Map<CommandSender, Set<String>> hasIgnored = new HashMap<>();
+	private UnifiedJedis jedis;
+	private JedisSimpleSet<UUID> unsubscribed;
+	private JedisSimpleMap<UUID, Set<String>> hasIgnored;
 
 	// XXX workaround for lack of author in DiscordGuildMessagePreBroadcastEvent (see below)
 	private final IdentityHashMap<Component, String> cachedAuthors = new IdentityHashMap<>();
@@ -33,18 +53,39 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		Objects.requireNonNull(getCommand("discordignorelist")).setExecutor(new CmdIgnorelist(this));
 
 		saveDefaultConfig();
+
+		jedis = initializeRedis(getConfig());
+		jedis.ping();
+
+		unsubscribed = new JedisSimpleSet<>(new HashSet<>(), jedis, "unsubscribed", UUID::toString, UUID::fromString);
+		hasIgnored = new JedisSimpleMap<>(
+			new HashMap<>(),
+			jedis,
+			"ignored",
+			UUID::toString,
+			UUID::fromString,
+			s -> Strings.join(s, ';'),
+			s -> Arrays.stream(s.split(";")).collect(Collectors.toSet())
+		);
+
+		var syncInterval = getConfig().getInt("redis.sync-interval");
+		Bukkit.getAsyncScheduler().runAtFixedRate(
+			this, t -> saveData(), syncInterval, syncInterval, TimeUnit.MINUTES
+		);
 	}
 
 	@Override
 	public void onDisable() {
 		DiscordSRV.api.unsubscribe(this);
+		saveData();
+		jedis.close();
 	}
 
-	public Set<CommandSender> getUnsubscribed() {
+	public SimpleSet<UUID> getUnsubscribed() {
 		return unsubscribed;
 	}
 
-	public Map<CommandSender, Set<String>> getHasIgnored() {
+	public SimpleMap<UUID, Set<String>> getHasIgnored() {
 		return hasIgnored;
 	}
 
@@ -54,11 +95,12 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		var author = cachedAuthors.remove(e.getMessage());
 
 		e.getRecipients().removeIf(r -> {
-			if (unsubscribed.contains(r)) return true;
+			if (!(r instanceof Player p)) return false;
+			if (unsubscribed.contains(p.getUniqueId())) return true;
 
 			if (author == null) return false;
 
-			var ignoring = hasIgnored.get(r);
+			var ignoring = hasIgnored.get(p.getUniqueId());
 			return ignoring != null && ignoring.contains(author);
 		});
 	}
@@ -72,6 +114,32 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		// messages from being mistaken for each other, we must rely on referential
 		// instead of object equality, hence IdentityHashMap (see above).
 		cachedAuthors.put(e.getMinecraftMessage(), e.getAuthor().getId());
+	}
+
+	private void saveData() {
+		unsubscribed.sync();
+		hasIgnored.sync();
+	}
+
+	private static UnifiedJedis initializeRedis(FileConfiguration config) {
+		var host = config.getString("redis.host", "localhost");
+		var port = config.getInt("redis.port", 6379);
+		var user = config.getString("redis.user", null);
+		var password = config.getString("redis.password", null);
+		var maxTotal = config.getInt("redis.max-total-connections", JedisPoolConfig.DEFAULT_MAX_TOTAL);
+		var maxIdleDuration = config.getLong("redis.max-idle-duration", 10L);
+
+		var jedisCfg = DefaultJedisClientConfig.builder()
+		                                       .user(user)
+		                                       .password(password)
+		                                       .build();
+
+		var jedisPooled = new JedisPooled(new HostAndPort(host, port), jedisCfg);
+		jedisPooled.getPool().setMaxTotal(maxTotal);
+		jedisPooled.getPool().setMaxIdle(maxTotal);
+		jedisPooled.getPool().setDurationBetweenEvictionRuns(Duration.of(maxIdleDuration, ChronoUnit.MINUTES));
+
+		return jedisPooled;
 	}
 
 }

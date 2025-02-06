@@ -1,5 +1,7 @@
-package com.github.jenbroek.discordsrv_ignore_addon;
+package com.github.jenbroek.discordsrv_ignore_addon.cmd;
 
+import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
+import com.github.jenbroek.discordsrv_ignore_addon.data.Message;
 import java.util.List;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -23,14 +25,14 @@ public class CmdToggle implements TabExecutor {
 		@NotNull String label,
 		@NotNull String[] args
 	) {
-		if (!(sender instanceof Player)) {
+		if (!(sender instanceof Player player)) {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
-			if (plugin.getUnsubscribed().add(sender)) {
-				sender.sendMessage(Message.CHAT_HIDDEN.asComponent(plugin.getConfig()));
+			if (plugin.getUnsubscribed().add(player.getUniqueId())) {
+				player.sendMessage(Message.CHAT_HIDDEN.asComponent(plugin.getConfig()));
 			} else {
-				plugin.getUnsubscribed().remove(sender);
-				sender.sendMessage(Message.CHAT_SHOWN.asComponent(plugin.getConfig()));
+				plugin.getUnsubscribed().remove(player.getUniqueId());
+				player.sendMessage(Message.CHAT_SHOWN.asComponent(plugin.getConfig()));
 			}
 		}
 		return true;

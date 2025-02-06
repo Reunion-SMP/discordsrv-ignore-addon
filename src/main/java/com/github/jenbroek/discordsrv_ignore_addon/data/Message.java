@@ -1,7 +1,5 @@
-package com.github.jenbroek.discordsrv_ignore_addon;
+package com.github.jenbroek.discordsrv_ignore_addon.data;
 
-import java.text.FieldPosition;
-import java.text.MessageFormat;
 import java.util.Objects;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;

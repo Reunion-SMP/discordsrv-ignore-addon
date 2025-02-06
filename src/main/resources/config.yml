@@ -1,3 +1,14 @@
+redis:
+  host: localhost
+  port: 6379
+  # user:
+  # password:
+  max-total-connections: 8
+  # Interval in minutes between idle connection evictor runs
+  max-idle-duration: 10
+  # Interval in minutes between data syncs to Redis
+  sync-interval: 30
+
 messages:
   unknown-user: "&#8094ddNo Discord user found for '&f%s&#8094dd'"
   user-ignored: "&#8094ddIgnoring Discord messages from '&f%s&#8094dd'"

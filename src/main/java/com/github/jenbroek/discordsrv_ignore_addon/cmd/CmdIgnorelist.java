@@ -1,5 +1,7 @@
-package com.github.jenbroek.discordsrv_ignore_addon;
+package com.github.jenbroek.discordsrv_ignore_addon.cmd;
 
+import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
+import com.github.jenbroek.discordsrv_ignore_addon.data.Message;
 import github.scarsz.discordsrv.DiscordSRV;
 import java.util.HashSet;
 import java.util.List;
@@ -29,16 +31,16 @@ public class CmdIgnorelist implements TabExecutor {
 		@NotNull String label,
 		@NotNull String[] args
 	) {
-		if (!(sender instanceof Player)) {
+		if (!(sender instanceof Player player)) {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
-			var ignoring = plugin.getHasIgnored().getOrDefault(sender, new HashSet<>());
+			var ignoring = plugin.getHasIgnored().getOrDefault(player.getUniqueId(), new HashSet<>());
 			var s = String.join(", ", ignoring.stream().map(CmdIgnorelist::getMinecraftName).toList());
 
 			if (s.isEmpty()) {
-				sender.sendMessage(Message.LIST_IGNORED_EMPTY.asComponent(plugin.getConfig()));
+				player.sendMessage(Message.LIST_IGNORED_EMPTY.asComponent(plugin.getConfig()));
 			} else {
-				sender.sendMessage(Message.LIST_IGNORED_TEMPLATE.asComponent(plugin.getConfig(), s));
+				player.sendMessage(Message.LIST_IGNORED_TEMPLATE.asComponent(plugin.getConfig(), s));
 			}
 		}
 
@@ -60,7 +62,9 @@ public class CmdIgnorelist implements TabExecutor {
 		UUID uid = null;
 
 		try {
-			uid = CompletableFuture.supplyAsync(() -> DiscordSRV.getPlugin().getAccountLinkManager().getUuid(discordUid)).get();
+			uid = CompletableFuture.supplyAsync(
+				() -> DiscordSRV.getPlugin().getAccountLinkManager().getUuid(discordUid)
+			).get();
 		} catch (InterruptedException | ExecutionException ignored) {
 			// Ignored
 		}
