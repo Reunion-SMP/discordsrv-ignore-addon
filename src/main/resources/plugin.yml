@@ -4,6 +4,9 @@ version: ${plugin.version}
 api-version: ${versions.api}
 main: ${plugin.pkg}.${plugin.class}
 
+authors: [jenbroek]
+website: https://github.com/jenbroek/discordsrv-ignore-addon
+
 depend: [DiscordSRV]
 
 permissions:
