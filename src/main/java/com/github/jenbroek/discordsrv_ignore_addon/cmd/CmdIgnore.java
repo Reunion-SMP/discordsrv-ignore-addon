@@ -44,7 +44,7 @@ public class CmdIgnore implements CommandExecutor {
 				if (user == null) {
 					player.sendMessage(Message.UNKNOWN_USER.asComponent(plugin.getConfig(), arg));
 				} else {
-					var ignoring = plugin.getHasIgnored().getOrDefault(player.getUniqueId(), new HashSet<>());
+					var ignoring = plugin.getIgnoring().getOrDefault(player.getUniqueId(), new HashSet<>());
 
 					if (ignoring.add(user)) {
 						player.sendMessage(Message.USER_IGNORED.asComponent(plugin.getConfig(), arg));
@@ -53,7 +53,7 @@ public class CmdIgnore implements CommandExecutor {
 						player.sendMessage(Message.USER_UNIGNORED.asComponent(plugin.getConfig(), arg));
 					}
 
-					plugin.getHasIgnored().put(player.getUniqueId(), ignoring);
+					plugin.getIgnoring().put(player.getUniqueId(), ignoring);
 				}
 			}
 		}

@@ -34,7 +34,7 @@ public class CmdIgnorelist implements TabExecutor {
 		if (!(sender instanceof Player player)) {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
-			var ignoring = plugin.getHasIgnored().getOrDefault(player.getUniqueId(), new HashSet<>());
+			var ignoring = plugin.getIgnoring().getOrDefault(player.getUniqueId(), new HashSet<>());
 			var s = String.join(", ", ignoring.stream().map(CmdIgnorelist::getMinecraftName).toList());
 
 			if (s.isEmpty()) {

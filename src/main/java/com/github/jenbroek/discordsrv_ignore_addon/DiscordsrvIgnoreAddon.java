@@ -33,12 +33,14 @@ import redis.clients.jedis.exceptions.JedisException;
 
 public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener {
 
+	private static final String REDIS_NS_PREFIX = "discordsrv-ignore-addon";
+
 	private UnifiedJedis jedis;
 	private boolean redisReady = true;
 	private final Object redisReadyLock = new Object();
 
 	private JedisSimpleSet<UUID> unsubscribed;
-	private JedisSimpleMap<UUID, Set<String>> hasIgnored;
+	private JedisSimpleMap<UUID, Set<String>> ignoring;
 
 	private final DiscordListener discordListener = new DiscordListener(this);
 
@@ -64,11 +66,18 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 			return;
 		}
 
-		unsubscribed = new JedisSimpleSet<>(new HashSet<>(), jedis, "unsubscribed", UUID::toString, UUID::fromString);
-		hasIgnored = new JedisSimpleMap<>(
+		var redisNamespace = getConfig().getString("redis.namespace", REDIS_NS_PREFIX);
+		unsubscribed = new JedisSimpleSet<>(
+			new HashSet<>(),
+			jedis,
+			redisNamespace + ":unsubscribed",
+			UUID::toString,
+			UUID::fromString
+		);
+		ignoring = new JedisSimpleMap<>(
 			new HashMap<>(),
 			jedis,
-			"ignored",
+			redisNamespace + ":ignoring",
 			UUID::toString,
 			UUID::fromString,
 			s -> String.join(";", s),
@@ -98,8 +107,8 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		return unsubscribed;
 	}
 
-	public SimpleMap<UUID, Set<String>> getHasIgnored() {
-		return hasIgnored;
+	public SimpleMap<UUID, Set<String>> getIgnoring() {
+		return ignoring;
 	}
 
 	private boolean saveData() {
@@ -108,7 +117,7 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 				try {
 					getLogger().info("Attempting to sync to Redis...");
 					unsubscribed.sync();
-					hasIgnored.sync();
+					ignoring.sync();
 					getLogger().info("Syncing complete");
 				} catch (JedisConnectionException e) {
 					getLogger().warning("Failed to connect to Redis: " + e.getMessage());

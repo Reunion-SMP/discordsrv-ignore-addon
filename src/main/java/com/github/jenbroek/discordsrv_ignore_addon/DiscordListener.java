@@ -29,7 +29,7 @@ public class DiscordListener {
 
 			if (author == null) return false;
 
-			var ignoring = plugin.getHasIgnored().get(p.getUniqueId());
+			var ignoring = plugin.getIgnoring().get(p.getUniqueId());
 			return ignoring != null && ignoring.contains(author);
 		});
 	}

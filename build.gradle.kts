@@ -40,7 +40,7 @@ java {
 
 tasks {
 	processResources {
-		filesMatching("plugin.yml") {
+		filesMatching(listOf("plugin.yml", "config.yml")) {
 			expand(
 				"plugin" to mapOf(
 					"name" to pluginName,

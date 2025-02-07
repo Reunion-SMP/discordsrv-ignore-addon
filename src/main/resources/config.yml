@@ -8,6 +8,8 @@ redis:
   max-idle-duration: 10
   # Interval in minutes between data syncs to Redis
   sync-interval: 30
+  # Unique string to prefix Redis keys with
+  namespace: ${plugin.id}
 
 messages:
   unknown-user: "&#8094ddNo Discord user found for '&f%s&#8094dd'"
