@@ -34,10 +34,16 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.UnifiedJedis;
+import redis.clients.jedis.exceptions.JedisAccessControlException;
+import redis.clients.jedis.exceptions.JedisConnectionException;
+import redis.clients.jedis.exceptions.JedisException;
 
 public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener {
 
 	private UnifiedJedis jedis;
+	private boolean redisReady = true;
+	private final Object redisReadyLock = new Object();
+
 	private JedisSimpleSet<UUID> unsubscribed;
 	private JedisSimpleMap<UUID, Set<String>> hasIgnored;
 
@@ -54,8 +60,17 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 		saveDefaultConfig();
 
-		jedis = initializeRedis(getConfig());
-		jedis.ping();
+		try {
+			jedis = initializeRedis(getConfig());
+			jedis.ping();
+		} catch (JedisConnectionException e) {
+			getLogger().severe("Failed to connect to Redis during setup: " + e.getMessage());
+			getLogger().warning("Disabling plugin...");
+			redisReady = false;
+
+			Bukkit.getPluginManager().disablePlugin(this);
+			return;
+		}
 
 		unsubscribed = new JedisSimpleSet<>(new HashSet<>(), jedis, "unsubscribed", UUID::toString, UUID::fromString);
 		hasIgnored = new JedisSimpleMap<>(
@@ -70,7 +85,13 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 		var syncInterval = getConfig().getInt("redis.sync-interval");
 		Bukkit.getAsyncScheduler().runAtFixedRate(
-			this, t -> saveData(), syncInterval, syncInterval, TimeUnit.MINUTES
+			this, t -> {
+				if (!saveData()) {
+					t.cancel();
+					getLogger().warning("Disabling plugin...");
+					Bukkit.getScheduler().runTask(this, () -> Bukkit.getPluginManager().disablePlugin(this));
+				}
+			}, syncInterval, syncInterval, TimeUnit.MINUTES
 		);
 	}
 
@@ -116,9 +137,28 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		cachedAuthors.put(e.getMinecraftMessage(), e.getAuthor().getId());
 	}
 
-	private void saveData() {
-		unsubscribed.sync();
-		hasIgnored.sync();
+	private boolean saveData() {
+		synchronized (redisReadyLock) {
+			if (redisReady) {
+				try {
+					unsubscribed.sync();
+					hasIgnored.sync();
+				} catch (JedisConnectionException e) {
+					getLogger().warning("Failed to connect to Redis: " + e.getMessage());
+					getLogger().warning("Retrying later...");
+				} catch (JedisAccessControlException e) {
+					getLogger().warning("Error while authenticating to Redis: " + e.getMessage());
+					getLogger().warning("Retrying later...");
+				} catch (JedisException e) {
+					getLogger().severe("Failed to sync to Redis: " + e.getMessage());
+					redisReady = false;
+					return false;
+				}
+				return true;
+			} else {
+				return false;
+			}
+		}
 	}
 
 	private static UnifiedJedis initializeRedis(FileConfiguration config) {
