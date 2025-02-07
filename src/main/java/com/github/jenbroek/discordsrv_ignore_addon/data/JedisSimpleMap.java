@@ -36,7 +36,9 @@ public class JedisSimpleMap<K, V> implements SimpleMap<K, V> {
 
 		delegate.putAll(
 			jedis.hgetAll(key).entrySet()
-			     .stream().collect(
+			     .stream()
+			     .filter(e -> !e.getValue().isEmpty())
+			     .collect(
 				     Collectors.toMap(
 					     e -> keyDeserializer.apply(e.getKey()),
 					     e -> valueDeserializer.apply(e.getValue())

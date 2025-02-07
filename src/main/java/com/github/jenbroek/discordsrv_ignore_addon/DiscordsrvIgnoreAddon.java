@@ -18,7 +18,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.logging.log4j.util.Strings;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.Listener;
@@ -72,7 +71,7 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 			"ignored",
 			UUID::toString,
 			UUID::fromString,
-			s -> Strings.join(s, ';'),
+			s -> String.join(";", s),
 			s -> Arrays.stream(s.split(";")).collect(Collectors.toSet())
 		);
 
