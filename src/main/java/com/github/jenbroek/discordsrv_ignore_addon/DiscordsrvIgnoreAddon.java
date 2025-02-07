@@ -8,16 +8,11 @@ import com.github.jenbroek.discordsrv_ignore_addon.data.JedisSimpleSet;
 import com.github.jenbroek.discordsrv_ignore_addon.data.SimpleMap;
 import com.github.jenbroek.discordsrv_ignore_addon.data.SimpleSet;
 import github.scarsz.discordsrv.DiscordSRV;
-import github.scarsz.discordsrv.api.Subscribe;
-import github.scarsz.discordsrv.api.events.DiscordGuildMessagePostProcessEvent;
-import github.scarsz.discordsrv.api.events.DiscordGuildMessagePreBroadcastEvent;
-import github.scarsz.discordsrv.dependencies.kyori.adventure.text.Component;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -26,7 +21,6 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.util.Strings;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import redis.clients.jedis.DefaultJedisClientConfig;
@@ -47,12 +41,11 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 	private JedisSimpleSet<UUID> unsubscribed;
 	private JedisSimpleMap<UUID, Set<String>> hasIgnored;
 
-	// XXX workaround for lack of author in DiscordGuildMessagePreBroadcastEvent (see below)
-	private final IdentityHashMap<Component, String> cachedAuthors = new IdentityHashMap<>();
+	private final DiscordListener discordListener = new DiscordListener(this);
 
 	@Override
 	public void onEnable() {
-		DiscordSRV.api.subscribe(this);
+		DiscordSRV.api.subscribe(discordListener);
 
 		Objects.requireNonNull(getCommand("discordtoggle")).setExecutor(new CmdToggle(this));
 		Objects.requireNonNull(getCommand("discordignore")).setExecutor(new CmdIgnore(this));
@@ -97,7 +90,7 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 	@Override
 	public void onDisable() {
-		DiscordSRV.api.unsubscribe(this);
+		DiscordSRV.api.unsubscribe(discordListener);
 		saveData();
 		jedis.close();
 	}
@@ -108,33 +101,6 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 	public SimpleMap<UUID, Set<String>> getHasIgnored() {
 		return hasIgnored;
-	}
-
-	@Subscribe
-	public void onDiscordMessagePreBroadcast(DiscordGuildMessagePreBroadcastEvent e) {
-		// TODO use `e.getAuthor()` once https://github.com/DiscordSRV/DiscordSRV/pull/1789 is available
-		var author = cachedAuthors.remove(e.getMessage());
-
-		e.getRecipients().removeIf(r -> {
-			if (!(r instanceof Player p)) return false;
-			if (unsubscribed.contains(p.getUniqueId())) return true;
-
-			if (author == null) return false;
-
-			var ignoring = hasIgnored.get(p.getUniqueId());
-			return ignoring != null && ignoring.contains(author);
-		});
-	}
-
-	@Subscribe
-	public void onDiscordMessagePostProcess(DiscordGuildMessagePostProcessEvent e) {
-		// XXX workaround for lack of author in DiscordGuildMessagePreBroadcastEvent (see above)
-		//
-		// We use a cache with a Component as a key because the author isn't included in
-		// DiscordGuildMessagePreBroadcastEvent. To prevent two users with identical
-		// messages from being mistaken for each other, we must rely on referential
-		// instead of object equality, hence IdentityHashMap (see above).
-		cachedAuthors.put(e.getMinecraftMessage(), e.getAuthor().getId());
 	}
 
 	private boolean saveData() {
