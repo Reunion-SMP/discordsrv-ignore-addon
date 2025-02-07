@@ -106,8 +106,10 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		synchronized (redisReadyLock) {
 			if (redisReady) {
 				try {
+					getLogger().info("Attempting to sync to Redis...");
 					unsubscribed.sync();
 					hasIgnored.sync();
+					getLogger().info("Syncing complete");
 				} catch (JedisConnectionException e) {
 					getLogger().warning("Failed to connect to Redis: " + e.getMessage());
 					getLogger().warning("Retrying later...");
@@ -119,6 +121,7 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 					redisReady = false;
 					return false;
 				}
+
 				return true;
 			} else {
 				return false;
