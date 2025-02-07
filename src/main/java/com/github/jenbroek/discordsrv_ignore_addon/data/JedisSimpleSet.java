@@ -42,13 +42,15 @@ public class JedisSimpleSet<E> implements SimpleSet<E> {
 
 	@Override
 	public boolean add(E e) {
-		pendingOperations.add(() -> jedis.sadd(key, serializer.apply(e)));
+		var value = serializer.apply(e);
+		pendingOperations.add(() -> jedis.sadd(key, value));
 		return delegate.add(e);
 	}
 
 	@Override
 	public void remove(E e) {
-		pendingOperations.add(() -> jedis.srem(key, serializer.apply(e)));
+		var value = serializer.apply(e);
+		pendingOperations.add(() -> jedis.srem(key, value));
 		delegate.remove(e);
 	}
 

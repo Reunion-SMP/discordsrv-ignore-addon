@@ -57,9 +57,19 @@ public class JedisSimpleMap<K, V> implements SimpleMap<K, V> {
 
 	@Override
 	public void put(K key, V value) {
+		var skey = keySerializer.apply(key);
+		var svalue = valueSerializer.apply(value);
+
 		pendingOperations.add(
-			() -> jedis.hset(this.key, keySerializer.apply(key), valueSerializer.apply(value))
+			() -> {
+				if (svalue.isEmpty()) {
+					jedis.hdel(this.key, skey);
+				} else {
+					jedis.hset(this.key, skey, svalue);
+				}
+			}
 		);
+
 		delegate.put(key, value);
 	}
 
