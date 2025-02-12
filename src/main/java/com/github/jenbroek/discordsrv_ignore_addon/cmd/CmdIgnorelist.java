@@ -49,6 +49,10 @@ public class CmdIgnorelist implements TabExecutor {
 				} else {
 					player.sendMessage(Message.LIST_IGNORED_TEMPLATE.asComponent(plugin.getConfig(), s));
 				}
+
+				if (plugin.getUnsubscribed().contains(player.getUniqueId())) {
+					player.sendMessage(Message.CHAT_HIDDEN_NOTICE.asComponent(plugin.getConfig()));
+				}
 			}, Bukkit.getScheduler().getMainThreadExecutor(plugin));
 		}
 

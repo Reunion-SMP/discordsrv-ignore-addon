@@ -17,5 +17,6 @@ messages:
   user-unignored: "&#8094ddNo longer ignoring Discord messages from '&f%s&#8094dd'"
   list-ignored-empty: "&#8094ddNo Discord users ignored"
   list-ignored-template: "&#8094ddIgnoring Discord messages from: &f%s"
+  chat-hidden-notice: "&oNote: all Discord messages are currently &#8094ddhidden"
   chat-hidden: "&#8094ddAll Discord messages are now &fhidden"
   chat-shown: "&#8094ddNon-ignored Discord messages are now &fshown"

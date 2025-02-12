@@ -11,6 +11,7 @@ public enum Message {
 	USER_UNIGNORED("user-unignored", "&#8094ddNo longer ignoring Discord messages from '&f%s&#8094dd'"),
 	LIST_IGNORED_EMPTY("list-ignored-empty", "&#8094ddNo Discord users ignored"),
 	LIST_IGNORED_TEMPLATE("list-ignored-template", "&#8094ddIgnoring Discord messages from: &f%s"),
+	CHAT_HIDDEN_NOTICE("chat-hidden-notice", "&oNote: all Discord messages are currently &#8094ddhidden"),
 	CHAT_HIDDEN("chat-hidden", "&#8094ddAll Discord messages are now &fhidden"),
 	CHAT_SHOWN("chat-shown", "&#8094ddNon-ignored Discord messages are now &fshown");
 
