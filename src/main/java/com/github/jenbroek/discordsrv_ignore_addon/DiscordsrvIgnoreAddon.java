@@ -11,12 +11,11 @@ import github.scarsz.discordsrv.DiscordSRV;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -68,14 +67,14 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 		var redisNamespace = getConfig().getString("redis.namespace", REDIS_NS_PREFIX);
 		unsubscribed = new JedisSimpleSet<>(
-			new HashSet<>(),
+			ConcurrentHashMap.newKeySet(),
 			jedis,
 			redisNamespace + ":unsubscribed",
 			UUID::toString,
 			UUID::fromString
 		);
 		ignoring = new JedisSimpleMap<>(
-			new HashMap<>(),
+			new ConcurrentHashMap<>(),
 			jedis,
 			redisNamespace + ":ignoring",
 			UUID::toString,

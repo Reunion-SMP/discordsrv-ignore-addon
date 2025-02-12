@@ -3,11 +3,9 @@ package com.github.jenbroek.discordsrv_ignore_addon.cmd;
 import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
 import com.github.jenbroek.discordsrv_ignore_addon.data.Message;
 import github.scarsz.discordsrv.DiscordSRV;
-import java.util.HashSet;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -34,14 +32,24 @@ public class CmdIgnorelist implements TabExecutor {
 		if (!(sender instanceof Player player)) {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
-			var ignoring = plugin.getIgnoring().getOrDefault(player.getUniqueId(), new HashSet<>());
-			var s = String.join(", ", ignoring.stream().map(CmdIgnorelist::getMinecraftName).toList());
-
-			if (s.isEmpty()) {
-				player.sendMessage(Message.LIST_IGNORED_EMPTY.asComponent(plugin.getConfig()));
-			} else {
-				player.sendMessage(Message.LIST_IGNORED_TEMPLATE.asComponent(plugin.getConfig(), s));
-			}
+			var ignoring = plugin.getIgnoring().getOrDefault(player.getUniqueId(), ConcurrentHashMap.newKeySet());
+			CompletableFuture.supplyAsync(
+				() -> String.join(
+					", ",
+					ignoring.stream()
+					        .map(this::tryGetMinecraftName)
+					        .toList() // Collect first so `join()` is done in parallel
+					        .stream()
+					        .map(CompletableFuture::join)
+					        .toList()
+				)
+			).thenAcceptAsync(s -> {
+				if (s.isEmpty()) {
+					player.sendMessage(Message.LIST_IGNORED_EMPTY.asComponent(plugin.getConfig()));
+				} else {
+					player.sendMessage(Message.LIST_IGNORED_TEMPLATE.asComponent(plugin.getConfig(), s));
+				}
+			}, Bukkit.getScheduler().getMainThreadExecutor(plugin));
 		}
 
 		return true;
@@ -58,25 +66,16 @@ public class CmdIgnorelist implements TabExecutor {
 		return List.of();
 	}
 
-	private static String getMinecraftName(String discordUid) {
-		UUID uid = null;
+	private CompletableFuture<String> tryGetMinecraftName(String discordUid) {
+		return CompletableFuture
+			.supplyAsync(() -> DiscordSRV.getPlugin().getAccountLinkManager().getUuid(discordUid))
+			.exceptionally(t -> null)
+			.thenApplyAsync(mcUid -> {
+				if (mcUid == null) return discordUid;
 
-		try {
-			uid = CompletableFuture.supplyAsync(
-				() -> DiscordSRV.getPlugin().getAccountLinkManager().getUuid(discordUid)
-			).get();
-		} catch (InterruptedException | ExecutionException ignored) {
-			// Ignored
-		}
-
-		if (uid != null) {
-			var n = Bukkit.getOfflinePlayer(uid).getName();
-			if (n != null) {
-				return n;
-			}
-		}
-
-		return discordUid;
+				var name = Bukkit.getOfflinePlayer(mcUid).getName();
+				return name != null ? name : discordUid;
+			}, Bukkit.getScheduler().getMainThreadExecutor(plugin)); // Ensure running on Bukkit's main thread
 	}
 
 }
