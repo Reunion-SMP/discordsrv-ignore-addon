@@ -1,56 +1,42 @@
 package com.github.jenbroek.discordsrv_ignore_addon.data;
 
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import redis.clients.jedis.UnifiedJedis;
-import redis.clients.jedis.exceptions.JedisException;
 
-public class JedisSimpleSet<E> implements SimpleSet<E> {
+public class JedisSimpleSet<E> extends JedisBacked implements SimpleSet<E> {
 
 	private final Set<E> delegate;
-	private final Queue<Runnable> pendingOperations = new ConcurrentLinkedQueue<>();
-
-	private final UnifiedJedis jedis;
-	private final String key;
 	private final Function<E, String> serializer;
 
 	public JedisSimpleSet(
-		Set<E> delegate,
 		UnifiedJedis jedis,
 		String key,
+		ExecutorService executor,
+		Set<E> delegate,
 		Function<E, String> serializer,
 		Function<String, E> deserializer
 	) {
-		this.delegate = delegate;
+		super(jedis, key, executor);
 
-		this.jedis = jedis;
-		this.key = key;
+		this.delegate = delegate;
 		this.serializer = serializer;
 
 		delegate.addAll(jedis.smembers(key).stream().map(deserializer).toList());
 	}
 
-	public void sync() throws JedisException {
-		var it = pendingOperations.iterator();
-		while (it.hasNext()) {
-			it.next().run();
-			it.remove();
-		}
-	}
-
 	@Override
 	public boolean add(E e) {
-		var value = serializer.apply(e);
-		pendingOperations.add(() -> jedis.sadd(key, value));
+		var svalue = serializer.apply(e);
+		executor.execute(() -> jedis.sadd(super.key, svalue));
 		return delegate.add(e);
 	}
 
 	@Override
 	public void remove(E e) {
-		var value = serializer.apply(e);
-		pendingOperations.add(() -> jedis.srem(key, value));
+		var svalue = serializer.apply(e);
+		executor.execute(() -> jedis.srem(super.key, svalue));
 		delegate.remove(e);
 	}
 

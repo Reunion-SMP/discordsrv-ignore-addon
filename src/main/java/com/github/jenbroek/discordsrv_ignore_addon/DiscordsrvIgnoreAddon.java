@@ -5,6 +5,7 @@ import com.github.jenbroek.discordsrv_ignore_addon.cmd.CmdIgnorelist;
 import com.github.jenbroek.discordsrv_ignore_addon.cmd.CmdToggle;
 import com.github.jenbroek.discordsrv_ignore_addon.data.JedisSimpleMap;
 import com.github.jenbroek.discordsrv_ignore_addon.data.JedisSimpleSet;
+import com.github.jenbroek.discordsrv_ignore_addon.data.RetryingExecutorService;
 import com.github.jenbroek.discordsrv_ignore_addon.data.SimpleMap;
 import com.github.jenbroek.discordsrv_ignore_addon.data.SimpleSet;
 import github.scarsz.discordsrv.DiscordSRV;
@@ -14,8 +15,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -35,8 +36,7 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 	private static final String REDIS_NS_PREFIX = "discordsrv-ignore-addon";
 
 	private UnifiedJedis jedis;
-	private boolean redisReady = true;
-	private final Object redisReadyLock = new Object();
+	private ScheduledExecutorService executor;
 
 	private JedisSimpleSet<UUID> unsubscribed;
 	private JedisSimpleMap<UUID, Set<String>> ignoring;
@@ -59,47 +59,44 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		} catch (JedisConnectionException e) {
 			getLogger().severe("Failed to connect to Redis during setup: " + e.getMessage());
 			getLogger().warning("Disabling plugin...");
-			redisReady = false;
-
 			Bukkit.getPluginManager().disablePlugin(this);
 			return;
 		}
 
+		var retryDelay = getConfig().getInt("redis.retry-delay", 30);
+		executor = new RetryingExecutorService(
+			this,
+			4,
+			Duration.of(retryDelay, ChronoUnit.MINUTES),
+			this::retryIfPossible
+		);
+
 		var redisNamespace = getConfig().getString("redis.namespace", REDIS_NS_PREFIX);
 		unsubscribed = new JedisSimpleSet<>(
-			ConcurrentHashMap.newKeySet(),
 			jedis,
 			redisNamespace + ":unsubscribed",
+			this.executor,
+			ConcurrentHashMap.newKeySet(),
 			UUID::toString,
 			UUID::fromString
 		);
 		ignoring = new JedisSimpleMap<>(
-			new ConcurrentHashMap<>(),
 			jedis,
 			redisNamespace + ":ignoring",
+			this.executor,
+			new ConcurrentHashMap<>(),
 			UUID::toString,
 			UUID::fromString,
 			s -> String.join(";", s),
 			s -> Arrays.stream(s.split(";")).collect(Collectors.toSet())
-		);
-
-		var syncInterval = getConfig().getInt("redis.sync-interval");
-		Bukkit.getAsyncScheduler().runAtFixedRate(
-			this, t -> {
-				if (!saveData()) {
-					t.cancel();
-					getLogger().warning("Disabling plugin...");
-					Bukkit.getScheduler().runTask(this, () -> Bukkit.getPluginManager().disablePlugin(this));
-				}
-			}, syncInterval, syncInterval, TimeUnit.MINUTES
 		);
 	}
 
 	@Override
 	public void onDisable() {
 		DiscordSRV.api.unsubscribe(discordListener);
-		saveData();
-		jedis.close();
+		if (executor != null) executor.shutdown();
+		if (jedis != null) jedis.close();
 	}
 
 	public SimpleSet<UUID> getUnsubscribed() {
@@ -108,33 +105,6 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 	public SimpleMap<UUID, Set<String>> getIgnoring() {
 		return ignoring;
-	}
-
-	private boolean saveData() {
-		synchronized (redisReadyLock) {
-			if (redisReady) {
-				try {
-					getLogger().info("Attempting to sync to Redis...");
-					unsubscribed.sync();
-					ignoring.sync();
-					getLogger().info("Syncing complete");
-				} catch (JedisConnectionException e) {
-					getLogger().warning("Failed to connect to Redis: " + e.getMessage());
-					getLogger().warning("Retrying later...");
-				} catch (JedisAccessControlException e) {
-					getLogger().warning("Error while authenticating to Redis: " + e.getMessage());
-					getLogger().warning("Retrying later...");
-				} catch (JedisException e) {
-					getLogger().severe("Failed to sync to Redis: " + e.getMessage());
-					redisReady = false;
-					return false;
-				}
-
-				return true;
-			} else {
-				return false;
-			}
-		}
 	}
 
 	private static UnifiedJedis initializeRedis(FileConfiguration config) {
@@ -156,6 +126,28 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		jedisPooled.getPool().setDurationBetweenEvictionRuns(Duration.of(maxIdleDuration, ChronoUnit.MINUTES));
 
 		return jedisPooled;
+	}
+
+	private boolean retryIfPossible(Throwable throwable) {
+		switch (throwable) {
+		case JedisConnectionException e:
+			getLogger().warning("Failed to connect to Redis: " + e.getMessage());
+			getLogger().warning("Retrying later...");
+			return true;
+		case JedisAccessControlException e:
+			getLogger().warning("Error while authenticating to Redis: " + e.getMessage());
+			getLogger().warning("Retrying later...");
+			return true;
+		case JedisException e:
+			getLogger().severe("Failed to sync to Redis: " + e.getMessage());
+			getLogger().warning("Disabling plugin...");
+			executor.shutdownNow();
+			Bukkit.getScheduler().runTask(this, () -> Bukkit.getPluginManager().disablePlugin(this));
+			return false;
+		default:
+			getLogger().severe("Uncaught exception: " + throwable.getMessage());
+			return false;
+		}
 	}
 
 }

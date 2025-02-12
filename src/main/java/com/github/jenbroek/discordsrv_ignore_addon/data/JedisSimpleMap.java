@@ -1,36 +1,30 @@
 package com.github.jenbroek.discordsrv_ignore_addon.data;
 
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import redis.clients.jedis.UnifiedJedis;
-import redis.clients.jedis.exceptions.JedisException;
 
-public class JedisSimpleMap<K, V> implements SimpleMap<K, V> {
+public class JedisSimpleMap<K, V> extends JedisBacked implements SimpleMap<K, V> {
 
 	private final Map<K, V> delegate;
-	private final Queue<Runnable> pendingOperations = new ConcurrentLinkedQueue<>();
-
-	private final UnifiedJedis jedis;
-	private final String key;
 	private final Function<K, String> keySerializer;
 	private final Function<V, String> valueSerializer;
 
 	public JedisSimpleMap(
-		Map<K, V> delegate,
 		UnifiedJedis jedis,
 		String key,
+		ExecutorService executor,
+		Map<K, V> delegate,
 		Function<K, String> keySerializer,
 		Function<String, K> keyDeserializer,
 		Function<V, String> valueSerializer,
 		Function<String, V> valueDeserializer
 	) {
-		this.delegate = delegate;
+		super(jedis, key, executor);
 
-		this.jedis = jedis;
-		this.key = key;
+		this.delegate = delegate;
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
 
@@ -47,28 +41,16 @@ public class JedisSimpleMap<K, V> implements SimpleMap<K, V> {
 		);
 	}
 
-	public void sync() throws JedisException {
-		var it = pendingOperations.iterator();
-		while (it.hasNext()) {
-			it.next().run();
-			it.remove();
-		}
-	}
-
 	@Override
 	public void put(K key, V value) {
 		var skey = keySerializer.apply(key);
 		var svalue = valueSerializer.apply(value);
 
-		pendingOperations.add(
-			() -> {
-				if (svalue.isEmpty()) {
-					jedis.hdel(this.key, skey);
-				} else {
-					jedis.hset(this.key, skey, svalue);
-				}
-			}
-		);
+		if (svalue.isEmpty()) {
+			executor.execute(() -> jedis.hdel(super.key, skey));
+		} else {
+			executor.execute(() -> jedis.hset(super.key, skey, svalue));
+		}
 
 		delegate.put(key, value);
 	}
