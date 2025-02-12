@@ -42,13 +42,20 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 	public static final int DEF_REDIS_RETRY_DELAY = 30; // In minutes
 	private static final String DEF_REDIS_NAMESPACE = "discordsrv-ignore-addon";
 
+	private final DiscordListener discordListener = new DiscordListener(this);
+
 	private UnifiedJedis jedis;
 	private ScheduledExecutorService executor;
 
 	private JedisSimpleSet<UUID> unsubscribed;
 	private JedisSimpleMap<UUID, Set<String>> ignoring;
 
-	private final DiscordListener discordListener = new DiscordListener(this);
+	@Override
+	public void onDisable() {
+		DiscordSRV.api.unsubscribe(discordListener);
+		if (executor != null) executor.shutdown();
+		if (jedis != null) jedis.close();
+	}
 
 	@Override
 	public void onEnable() {
@@ -99,40 +106,12 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 		);
 	}
 
-	@Override
-	public void onDisable() {
-		DiscordSRV.api.unsubscribe(discordListener);
-		if (executor != null) executor.shutdown();
-		if (jedis != null) jedis.close();
-	}
-
 	public SimpleSet<UUID> getUnsubscribed() {
 		return unsubscribed;
 	}
 
 	public SimpleMap<UUID, Set<String>> getIgnoring() {
 		return ignoring;
-	}
-
-	private static UnifiedJedis initializeRedis(FileConfiguration cfg) {
-		var host = cfg.getString("redis.host", DEF_REDIS_HOST);
-		var port = cfg.getInt("redis.port", DEF_REDIS_PORT);
-		var user = cfg.getString("redis.user", DEF_REDIS_USER);
-		var password = cfg.getString("redis.password", DEF_REDIS_PASSWORD);
-		var maxTotalConnections = cfg.getInt("redis.max-total-connections", DEF_REDIS_MAX_TOTAL_CONNECTIONS);
-		var maxIdleDuration = cfg.getLong("redis.max-idle-duration", DEF_REDIS_MAX_IDLE_DURATION);
-
-		var jedisCfg = DefaultJedisClientConfig.builder()
-		                                       .user(user)
-		                                       .password(password)
-		                                       .build();
-
-		var jedis = new JedisPooled(new HostAndPort(host, port), jedisCfg);
-		jedis.getPool().setMaxTotal(maxTotalConnections);
-		jedis.getPool().setMaxIdle(maxTotalConnections);
-		jedis.getPool().setDurationBetweenEvictionRuns(Duration.of(maxIdleDuration, ChronoUnit.MINUTES));
-
-		return jedis;
 	}
 
 	private boolean retryIfPossible(Throwable throwable) {
@@ -155,6 +134,27 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 			getLogger().severe("Uncaught exception: " + throwable.getMessage());
 			return false;
 		}
+	}
+
+	private static UnifiedJedis initializeRedis(FileConfiguration cfg) {
+		var host = cfg.getString("redis.host", DEF_REDIS_HOST);
+		var port = cfg.getInt("redis.port", DEF_REDIS_PORT);
+		var user = cfg.getString("redis.user", DEF_REDIS_USER);
+		var password = cfg.getString("redis.password", DEF_REDIS_PASSWORD);
+		var maxTotalConnections = cfg.getInt("redis.max-total-connections", DEF_REDIS_MAX_TOTAL_CONNECTIONS);
+		var maxIdleDuration = cfg.getLong("redis.max-idle-duration", DEF_REDIS_MAX_IDLE_DURATION);
+
+		var jedisCfg = DefaultJedisClientConfig.builder()
+		                                       .user(user)
+		                                       .password(password)
+		                                       .build();
+
+		var jedis = new JedisPooled(new HostAndPort(host, port), jedisCfg);
+		jedis.getPool().setMaxTotal(maxTotalConnections);
+		jedis.getPool().setMaxIdle(maxTotalConnections);
+		jedis.getPool().setDurationBetweenEvictionRuns(Duration.of(maxIdleDuration, ChronoUnit.MINUTES));
+
+		return jedis;
 	}
 
 }
