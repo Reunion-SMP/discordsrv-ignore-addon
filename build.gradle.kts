@@ -62,6 +62,8 @@ tasks {
 	}
 
 	shadowJar {
+		archiveClassifier.set("")
+
 		minimize()
 		relocate("redis.clients.jedis", "${pluginGroup}.deps.jedis")
 
