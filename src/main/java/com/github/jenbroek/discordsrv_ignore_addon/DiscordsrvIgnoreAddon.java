@@ -38,6 +38,7 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 	public static final int DEF_REDIS_MAX_TOTAL_CONNECTIONS = JedisPoolConfig.DEFAULT_MAX_TOTAL;
 	public static final int DEF_REDIS_MAX_IDLE_DURATION = 10; // In minutes
 	public static final int DEF_REDIS_RETRY_DELAY = 30; // In minutes
+	private static final int DEF_REDIS_MAX_RETRIES = -1;
 	private static final String DEF_REDIS_NAMESPACE = "discordsrv-ignore-addon";
 
 	private final DiscordListener discordListener = new DiscordListener(this);
@@ -64,6 +65,7 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 			this,
 			4,
 			Duration.of(retryDelay, ChronoUnit.MINUTES),
+			getConfig().getInt("redis.max-retries", DEF_REDIS_MAX_RETRIES),
 			this::retryIfPossible
 		);
 

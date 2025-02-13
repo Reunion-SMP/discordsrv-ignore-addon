@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 public class RetryingExecutorService extends ScheduledThreadPoolExecutor {
 
 	private final Duration retryDelay;
+	private final int maxRetries;
 	private final Function<Throwable, Boolean> shouldRetry;
 
 	{
@@ -22,10 +23,12 @@ public class RetryingExecutorService extends ScheduledThreadPoolExecutor {
 		DiscordsrvIgnoreAddon plugin,
 		int corePoolSize,
 		Duration retryDelay,
+		int maxRetries,
 		Function<Throwable, Boolean> shouldRetry
 	) {
 		super(corePoolSize, (r, e) -> silentlyReject(plugin, r, e));
 		this.retryDelay = retryDelay;
+		this.maxRetries = maxRetries;
 		this.shouldRetry = shouldRetry;
 	}
 
@@ -37,16 +40,8 @@ public class RetryingExecutorService extends ScheduledThreadPoolExecutor {
 		//
 		// Opted to not implemented `decorateTask` because ScheduledFutureTask cannot be extended,
 		// and a lot of behavior would have to be re-implemented by ourselves otherwise otherwise.
-		Runnable cmd = () -> {
-			try {
-				command.run();
-			} catch (Throwable t) {
-				if (shouldRetry.apply(t)) {
-					schedule(command, retryDelay.toSeconds(), TimeUnit.SECONDS);
-				}
-			}
-		};
-		return super.schedule(cmd, delay, unit);
+		var task = new RetryingTask(maxRetries, command);
+		return super.schedule(task, delay, unit);
 	}
 
 	@Override
@@ -58,6 +53,30 @@ public class RetryingExecutorService extends ScheduledThreadPoolExecutor {
 	private static void silentlyReject(DiscordsrvIgnoreAddon p, Runnable r, ThreadPoolExecutor e) {
 		if (e.isShutdown()) return;
 		p.getLogger().warning("Silently rejecting task " + r.toString() + " from " + e);
+	}
+
+	public class RetryingTask implements Runnable {
+
+		private int retriesLeft;
+		private final Runnable task;
+
+		public RetryingTask(int maxRetries, Runnable task) {
+			this.retriesLeft = maxRetries;
+			this.task = task;
+		}
+
+		@Override
+		public void run() {
+			try {
+				task.run();
+			} catch (Throwable t) {
+				// Note we return and *then* decrement, otherwise the count is off by 1
+				if (shouldRetry.apply(t) && (retriesLeft == -1 || retriesLeft-- > 0)) {
+					schedule(this, retryDelay.toSeconds(), TimeUnit.SECONDS);
+				}
+			}
+		}
+
 	}
 
 }

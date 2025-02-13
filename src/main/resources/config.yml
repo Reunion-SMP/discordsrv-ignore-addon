@@ -8,6 +8,9 @@ redis:
   max-idle-duration: 10
   # Minimum delay in minutes after which to retry failed Redis sync
   retry-delay: 30
+  # Max retries before giving up on a Redis sync
+  # Set to -1 to retry indefinitely
+  max-retries: -1
   # Unique string to prefix Redis keys with
   namespace: ${plugin.id}
 
