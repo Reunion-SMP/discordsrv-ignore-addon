@@ -2,9 +2,9 @@ package com.github.jenbroek.discordsrv_ignore_addon.data;
 
 import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
 import java.time.Duration;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
@@ -55,8 +55,9 @@ public class RetryingExecutorService extends ScheduledThreadPoolExecutor {
 		schedule(command, 0, TimeUnit.NANOSECONDS);
 	}
 
-	private static void silentlyReject(DiscordsrvIgnoreAddon p, Runnable r, Executor e) {
-		p.getLogger().warning("Silently rejecting task " + r.toString() + " from " + e.toString());
+	private static void silentlyReject(DiscordsrvIgnoreAddon p, Runnable r, ThreadPoolExecutor e) {
+		if (e.isShutdown()) return;
+		p.getLogger().warning("Silently rejecting task " + r.toString() + " from " + e);
 	}
 
 }

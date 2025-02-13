@@ -1,29 +1,28 @@
 package com.github.jenbroek.discordsrv_ignore_addon.data;
 
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import redis.clients.jedis.UnifiedJedis;
 
 public class JedisSimpleSet<E> extends JedisBacked implements SimpleSet<E> {
 
-	private final Set<E> delegate;
+	private final Set<E> delegate = ConcurrentHashMap.newKeySet();
 	private final Function<E, String> serializer;
 
 	public JedisSimpleSet(
 		UnifiedJedis jedis,
 		String key,
 		ExecutorService executor,
-		Set<E> delegate,
 		Function<E, String> serializer,
 		Function<String, E> deserializer
 	) {
 		super(jedis, key, executor);
 
-		this.delegate = delegate;
 		this.serializer = serializer;
 
-		delegate.addAll(jedis.smembers(key).stream().map(deserializer).toList());
+		executor.execute(() -> delegate.addAll(jedis.smembers(key).stream().map(deserializer).toList()));
 	}
 
 	@Override

@@ -15,10 +15,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -59,23 +57,7 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 	@Override
 	public void onEnable() {
-		DiscordSRV.api.subscribe(discordListener);
-
-		Objects.requireNonNull(getCommand("discordtoggle")).setExecutor(new CmdToggle(this));
-		Objects.requireNonNull(getCommand("discordignore")).setExecutor(new CmdIgnore(this));
-		Objects.requireNonNull(getCommand("discordignorelist")).setExecutor(new CmdIgnorelist(this));
-
 		saveDefaultConfig();
-
-		try {
-			jedis = initializeRedis(getConfig());
-			jedis.ping();
-		} catch (JedisConnectionException e) {
-			getLogger().severe("Failed to connect to Redis during setup: " + e.getMessage());
-			getLogger().warning("Disabling plugin...");
-			Bukkit.getPluginManager().disablePlugin(this);
-			return;
-		}
 
 		var retryDelay = getConfig().getInt("redis.retry-delay", DEF_REDIS_RETRY_DELAY);
 		executor = new RetryingExecutorService(
@@ -85,25 +67,39 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 			this::retryIfPossible
 		);
 
+		try {
+			jedis = initializeRedis(getConfig());
+			jedis.ping();
+		} catch (JedisConnectionException e) {
+			getLogger().severe("Failed to connect to Redis during setup: " + e.getMessage());
+			getLogger().warning("Plugin will continue without persisting data!");
+			executor.shutdown();
+		}
+
 		var namespace = getConfig().getString("redis.namespace", DEF_REDIS_NAMESPACE);
 		unsubscribed = new JedisSimpleSet<>(
 			jedis,
 			namespace + ":unsubscribed",
-			this.executor,
-			ConcurrentHashMap.newKeySet(),
+			executor,
 			UUID::toString,
 			UUID::fromString
 		);
 		ignoring = new JedisSimpleMap<>(
 			jedis,
 			namespace + ":ignoring",
-			this.executor,
-			new ConcurrentHashMap<>(),
+			executor,
 			UUID::toString,
 			UUID::fromString,
 			s -> String.join(";", s),
 			s -> Arrays.stream(s.split(";")).collect(Collectors.toSet())
 		);
+
+		DiscordSRV.api.subscribe(discordListener);
+
+		Objects.requireNonNull(getCommand("discordtoggle")).setExecutor(new CmdToggle(this));
+		Objects.requireNonNull(getCommand("discordignore")).setExecutor(new CmdIgnore(this));
+		Objects.requireNonNull(getCommand("discordignorelist")).setExecutor(new CmdIgnorelist(this));
+
 	}
 
 	public SimpleSet<UUID> getUnsubscribed() {
@@ -125,10 +121,9 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 			getLogger().warning("Retrying later...");
 			return true;
 		case JedisException e:
-			getLogger().severe("Failed to sync to Redis: " + e.getMessage());
-			getLogger().warning("Disabling plugin...");
+			getLogger().severe("Failed to persist to Redis: " + e.getMessage());
+			getLogger().warning("Plugin will continue without persisting data!");
 			executor.shutdownNow();
-			Bukkit.getScheduler().runTask(this, () -> Bukkit.getPluginManager().disablePlugin(this));
 			return false;
 		default:
 			getLogger().severe("Uncaught exception: " + throwable.getMessage());

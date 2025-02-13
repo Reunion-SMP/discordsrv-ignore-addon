@@ -1,6 +1,7 @@
 package com.github.jenbroek.discordsrv_ignore_addon.data;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -8,7 +9,7 @@ import redis.clients.jedis.UnifiedJedis;
 
 public class JedisSimpleMap<K, V> extends JedisBacked implements SimpleMap<K, V> {
 
-	private final Map<K, V> delegate;
+	private final Map<K, V> delegate = new ConcurrentHashMap<>();
 	private final Function<K, String> keySerializer;
 	private final Function<V, String> valueSerializer;
 
@@ -16,7 +17,6 @@ public class JedisSimpleMap<K, V> extends JedisBacked implements SimpleMap<K, V>
 		UnifiedJedis jedis,
 		String key,
 		ExecutorService executor,
-		Map<K, V> delegate,
 		Function<K, String> keySerializer,
 		Function<String, K> keyDeserializer,
 		Function<V, String> valueSerializer,
@@ -24,11 +24,10 @@ public class JedisSimpleMap<K, V> extends JedisBacked implements SimpleMap<K, V>
 	) {
 		super(jedis, key, executor);
 
-		this.delegate = delegate;
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
 
-		delegate.putAll(
+		executor.execute(() -> delegate.putAll(
 			jedis.hgetAll(key).entrySet()
 			     .stream()
 			     .filter(e -> !e.getValue().isEmpty())
@@ -38,7 +37,7 @@ public class JedisSimpleMap<K, V> extends JedisBacked implements SimpleMap<K, V>
 					     e -> valueDeserializer.apply(e.getValue())
 				     )
 			     )
-		);
+		));
 	}
 
 	@Override
