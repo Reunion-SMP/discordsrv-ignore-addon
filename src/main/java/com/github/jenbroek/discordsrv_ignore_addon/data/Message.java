@@ -6,9 +6,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 public enum Message {
 
-	UNKNOWN_USER("unknown-user", "&#8094ddNo Discord user found for '&f%s&#8094dd'"),
-	USER_IGNORED("user-ignored", "&#8094ddNow ignoring Discord messages from '&f%s&#8094dd'"),
-	USER_UNIGNORED("user-unignored", "&#8094ddNo longer ignoring Discord messages from '&f%s&#8094dd'"),
+	UNKNOWN_USER("unknown-user", "&#8094ddNo Discord user found for &f%s"),
+	USER_IGNORED("user-ignored", "&#8094ddNow ignoring Discord messages from &f%s"),
+	USER_UNIGNORED("user-unignored", "&#8094ddNo longer ignoring Discord messages from &f%s"),
 	LIST_IGNORED_EMPTY("list-ignored-empty", "&#8094ddNo Discord users ignored"),
 	LIST_IGNORED_TEMPLATE("list-ignored-template", "&#8094ddIgnoring Discord messages from: &f%s"),
 	CHAT_HIDDEN_NOTICE("chat-hidden-notice", "&oNote: all Discord messages are currently &#8094ddhidden"),
@@ -24,7 +24,7 @@ public enum Message {
 	}
 
 	public TextComponent asComponent(FileConfiguration cfg, Object... placeholders) {
-		var msg = cfg.getString("messages." + this.key, this.def).formatted(placeholders);
+		var msg = cfg.getString("messages." + key, def).formatted(placeholders);
 		return LegacyComponentSerializer.legacyAmpersand().deserialize(msg);
 	}
 
