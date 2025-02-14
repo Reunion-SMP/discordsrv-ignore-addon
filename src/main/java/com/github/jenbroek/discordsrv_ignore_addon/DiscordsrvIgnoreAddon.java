@@ -12,7 +12,6 @@ import github.scarsz.discordsrv.DiscordSRV;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
@@ -28,6 +27,8 @@ import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.exceptions.JedisAccessControlException;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.jedis.exceptions.JedisException;
+
+import static java.util.Objects.requireNonNull;
 
 public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener {
 
@@ -98,9 +99,9 @@ public final class DiscordsrvIgnoreAddon extends JavaPlugin implements Listener 
 
 		DiscordSRV.api.subscribe(discordListener);
 
-		Objects.requireNonNull(getCommand("discordtoggle")).setExecutor(new CmdToggle(this));
-		Objects.requireNonNull(getCommand("discordignore")).setExecutor(new CmdIgnore(this));
-		Objects.requireNonNull(getCommand("discordignorelist")).setExecutor(new CmdIgnorelist(this));
+		requireNonNull(getCommand("discordtoggle")).setExecutor(new CmdToggle(this));
+		requireNonNull(getCommand("discordignore")).setExecutor(new CmdIgnore(this));
+		requireNonNull(getCommand("discordignorelist")).setExecutor(new CmdIgnorelist(this));
 
 	}
 

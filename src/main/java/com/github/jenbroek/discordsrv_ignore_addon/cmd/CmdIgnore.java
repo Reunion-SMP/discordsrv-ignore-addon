@@ -1,7 +1,6 @@
 package com.github.jenbroek.discordsrv_ignore_addon.cmd;
 
 import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
-import com.github.jenbroek.discordsrv_ignore_addon.data.Message;
 import github.scarsz.discordsrv.DiscordSRV;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,6 +11,10 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+
+import static com.github.jenbroek.discordsrv_ignore_addon.data.Message.UNKNOWN_USER;
+import static com.github.jenbroek.discordsrv_ignore_addon.data.Message.USER_IGNORED;
+import static com.github.jenbroek.discordsrv_ignore_addon.data.Message.USER_UNIGNORED;
 
 public class CmdIgnore implements CommandExecutor {
 
@@ -40,19 +43,19 @@ public class CmdIgnore implements CommandExecutor {
 			for (var arg : args) {
 				tryGetDiscordUid(arg).thenAcceptAsync(user -> {
 					if (user == null) {
-						player.sendMessage(Message.UNKNOWN_USER.asComponent(plugin.getConfig(), arg));
+						player.sendMessage(UNKNOWN_USER.asComponent(plugin.getConfig(), arg));
 					} else {
-						var ignoring = plugin.getIgnoring()
-						                     .getOrDefault(player.getUniqueId(), ConcurrentHashMap.newKeySet());
+						var mcUid = player.getUniqueId();
+						var ignoring = plugin.getIgnoring().getOrDefault(mcUid, ConcurrentHashMap.newKeySet());
 
 						if (ignoring.add(user)) {
-							player.sendMessage(Message.USER_IGNORED.asComponent(plugin.getConfig(), arg));
+							player.sendMessage(USER_IGNORED.asComponent(plugin.getConfig(), arg));
 						} else {
 							ignoring.remove(user);
-							player.sendMessage(Message.USER_UNIGNORED.asComponent(plugin.getConfig(), arg));
+							player.sendMessage(USER_UNIGNORED.asComponent(plugin.getConfig(), arg));
 						}
 
-						plugin.getIgnoring().put(player.getUniqueId(), ignoring);
+						plugin.getIgnoring().put(mcUid, ignoring);
 					}
 				}, Bukkit.getScheduler().getMainThreadExecutor(plugin)); // Ensure running on Bukkit's main thread
 			}

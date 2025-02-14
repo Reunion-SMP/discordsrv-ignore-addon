@@ -1,7 +1,6 @@
 package com.github.jenbroek.discordsrv_ignore_addon.cmd;
 
 import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
-import com.github.jenbroek.discordsrv_ignore_addon.data.Message;
 import github.scarsz.discordsrv.DiscordSRV;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -13,6 +12,10 @@ import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static com.github.jenbroek.discordsrv_ignore_addon.data.Message.CHAT_HIDDEN_NOTICE;
+import static com.github.jenbroek.discordsrv_ignore_addon.data.Message.LIST_IGNORED_EMPTY;
+import static com.github.jenbroek.discordsrv_ignore_addon.data.Message.LIST_IGNORED_TEMPLATE;
 
 public class CmdIgnorelist implements TabExecutor {
 
@@ -32,7 +35,9 @@ public class CmdIgnorelist implements TabExecutor {
 		if (!(sender instanceof Player player)) {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
-			var ignoring = plugin.getIgnoring().getOrDefault(player.getUniqueId(), ConcurrentHashMap.newKeySet());
+			var mcUid = player.getUniqueId();
+			var ignoring = plugin.getIgnoring().getOrDefault(mcUid, ConcurrentHashMap.newKeySet());
+
 			CompletableFuture.supplyAsync(
 				() -> String.join(
 					", ",
@@ -45,13 +50,13 @@ public class CmdIgnorelist implements TabExecutor {
 				)
 			).thenAcceptAsync(s -> {
 				if (s.isEmpty()) {
-					player.sendMessage(Message.LIST_IGNORED_EMPTY.asComponent(plugin.getConfig()));
+					player.sendMessage(LIST_IGNORED_EMPTY.asComponent(plugin.getConfig()));
 				} else {
-					player.sendMessage(Message.LIST_IGNORED_TEMPLATE.asComponent(plugin.getConfig(), s));
+					player.sendMessage(LIST_IGNORED_TEMPLATE.asComponent(plugin.getConfig(), s));
 				}
 
-				if (plugin.getUnsubscribed().contains(player.getUniqueId())) {
-					player.sendMessage(Message.CHAT_HIDDEN_NOTICE.asComponent(plugin.getConfig()));
+				if (plugin.getUnsubscribed().contains(mcUid)) {
+					player.sendMessage(CHAT_HIDDEN_NOTICE.asComponent(plugin.getConfig()));
 				}
 			}, Bukkit.getScheduler().getMainThreadExecutor(plugin));
 		}
@@ -76,7 +81,6 @@ public class CmdIgnorelist implements TabExecutor {
 			.exceptionally(t -> null)
 			.thenApplyAsync(mcUid -> {
 				if (mcUid == null) return discordUid;
-
 				var name = Bukkit.getOfflinePlayer(mcUid).getName();
 				return name != null ? name : discordUid;
 			}, Bukkit.getScheduler().getMainThreadExecutor(plugin)); // Ensure running on Bukkit's main thread

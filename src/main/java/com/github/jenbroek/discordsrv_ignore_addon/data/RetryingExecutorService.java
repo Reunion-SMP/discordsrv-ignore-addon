@@ -40,7 +40,7 @@ public class RetryingExecutorService extends ScheduledThreadPoolExecutor {
 		//
 		// Opted to not implemented `decorateTask` because ScheduledFutureTask cannot be extended,
 		// and a lot of behavior would have to be re-implemented by ourselves otherwise otherwise.
-		var task = new RetryingTask(maxRetries, command);
+		var task = new RetryingTask(command, maxRetries);
 		return super.schedule(task, delay, unit);
 	}
 
@@ -57,12 +57,12 @@ public class RetryingExecutorService extends ScheduledThreadPoolExecutor {
 
 	public class RetryingTask implements Runnable {
 
-		private int retriesLeft;
 		private final Runnable task;
+		private int retriesLeft;
 
-		public RetryingTask(int maxRetries, Runnable task) {
-			this.retriesLeft = maxRetries;
+		public RetryingTask(Runnable task, int maxRetries) {
 			this.task = task;
+			this.retriesLeft = maxRetries;
 		}
 
 		@Override
