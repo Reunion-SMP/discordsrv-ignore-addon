@@ -28,11 +28,12 @@ public class CmdToggle implements TabExecutor {
 		if (!(sender instanceof Player player)) {
 			sender.sendMessage("You must be a player to use this command!");
 		} else {
-			if (plugin.getUnsubscribed().add(player.getUniqueId())) {
-				player.sendMessage(Message.CHAT_HIDDEN.asComponent(plugin.getConfig()));
-			} else {
+			if (plugin.getUnsubscribed().contains(player.getUniqueId())) {
 				plugin.getUnsubscribed().remove(player.getUniqueId());
 				player.sendMessage(Message.CHAT_SHOWN.asComponent(plugin.getConfig()));
+			} else {
+				plugin.getUnsubscribed().add(player.getUniqueId());
+				player.sendMessage(Message.CHAT_HIDDEN.asComponent(plugin.getConfig()));
 			}
 		}
 		return true;
