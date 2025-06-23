@@ -1,0 +1,25 @@
+redis:
+  host: localhost
+  port: 6379
+  # user:
+  # password:
+  max-total-connections: 8
+  # Interval in minutes between idle connection evictor runs
+  max-idle-duration: 10
+  # Minimum delay in minutes after which to retry failed Redis sync
+  retry-delay: 30
+  # Max retries before giving up on a Redis sync
+  # Set to -1 to retry indefinitely
+  max-retries: -1
+  # Unique string to prefix Redis keys with
+  namespace: ${plugin.id}
+
+messages:
+  unknown-user: "&#8094ddNo Discord user found for &f%s"
+  user-ignored: "&#8094ddNow ignoring Discord messages from &f%s"
+  user-unignored: "&#8094ddNo longer ignoring Discord messages from &f%s"
+  list-ignored-empty: "&#8094ddNo Discord users ignored"
+  list-ignored-template: "&#8094ddIgnoring Discord messages from: &f%s"
+  chat-hidden-notice: "&oNote: all Discord messages are currently &#8094ddhidden"
+  chat-hidden: "&#8094ddAll Discord messages are now &fhidden"
+  chat-shown: "&#8094ddNon-ignored Discord messages are now &fshown"

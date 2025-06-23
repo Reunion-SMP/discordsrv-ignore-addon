@@ -1,6 +1,5 @@
 package com.github.jenbroek.discordsrv_ignore_addon.data;
 
-import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
 import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -8,6 +7,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
+
+import com.github.jenbroek.discordsrv_ignore_addon.DiscordsrvIgnoreAddon;
 
 public class RetryingExecutorService extends ScheduledThreadPoolExecutor {
 

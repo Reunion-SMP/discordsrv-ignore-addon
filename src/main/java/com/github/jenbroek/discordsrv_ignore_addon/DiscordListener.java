@@ -4,7 +4,11 @@ import github.scarsz.discordsrv.api.Subscribe;
 import github.scarsz.discordsrv.api.events.DiscordGuildMessagePostProcessEvent;
 import github.scarsz.discordsrv.api.events.DiscordGuildMessagePreBroadcastEvent;
 import github.scarsz.discordsrv.dependencies.kyori.adventure.text.Component;
+
+import java.sql.SQLException;
 import java.util.IdentityHashMap;
+import java.util.Set;
+
 import org.bukkit.entity.Player;
 
 public class DiscordListener {
@@ -29,7 +33,12 @@ public class DiscordListener {
 
 			if (author == null) return false;
 
-			var ignoring = plugin.getIgnoring().get(p.getUniqueId());
+			Set<String> ignoring = null;
+			try {
+   				 ignoring = plugin.getIgnoreStorage().getIgnoredDiscordUserIds(p.getUniqueId());
+			} catch (SQLException ex) {
+    			ex.printStackTrace();
+			}
 			return ignoring != null && ignoring.contains(author);
 		});
 	}

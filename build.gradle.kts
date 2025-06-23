@@ -13,7 +13,7 @@ dependencies {
 	compileOnly(libs.paper.api)
 	compileOnly(libs.discordsrv.api)
 	compileOnly(libs.adventure.api)
-	implementation(libs.jedis)
+	implementation("org.xerial:sqlite-jdbc:3.44.1.0")
 }
 
 val pat = "-"
@@ -65,7 +65,7 @@ tasks {
 		archiveClassifier.set("")
 
 		minimize()
-		relocate("redis.clients.jedis", "${pluginGroup}.deps.jedis")
+		relocate("org.sqlite", "${pluginGroup}.deps.sqlite")
 
 		exclude("META-INF/maven/**")
 		exclude("META-INF/proguard/**")
